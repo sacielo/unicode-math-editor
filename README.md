@@ -1,6 +1,8 @@
 # unicode-math-editor
 A lightweight, browser-based editor for writing math using real Unicode characters.
 
+[Live Demo](https://sacielo.github.io/unicode-math-editor/)
+
 ---
 
 ## Why

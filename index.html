@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unicode Math Editor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0f0f11;
+    --surface: #18181c;
+    --surface2: #222228;
+    --border: #2e2e38;
+    --border2: #3e3e4e;
+    --text: #e8e8f0;
+    --text2: #9898b0;
+    --text3: #5a5a72;
+    --accent: #7c6cfa;
+    --accent-dim: #2e2860;
+    --accent-glow: rgba(124,108,250,0.15);
+    --green: #4ecb8a;
+    --green-dim: #1a3d2b;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  header {
+    width: 100%;
+    max-width: 860px;
+    padding: 2.5rem 1.5rem 1rem;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+
+  header h1 {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: var(--text2);
+    letter-spacing: 0.05em;
+  }
+
+  header .badge {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    padding: 2px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+  }
+
+  main {
+    width: 100%;
+    max-width: 860px;
+    padding: 0 1.5rem 3rem;
+    flex: 1;
+  }
+
+  /* Editor */
+  .editor-wrap {
+    position: relative;
+    margin-bottom: 12px;
+  }
+
+  #editor {
+    width: 100%;
+    min-height: 110px;
+    font-family: var(--mono);
+    font-size: 1.35rem;
+    line-height: 1.7;
+    padding: 16px 18px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+    caret-color: var(--accent);
+  }
+
+  #editor:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  #editor::placeholder { color: var(--text3); font-size: 1rem; }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 5px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: all 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
+  .btn.primary { border-color: var(--accent); color: var(--accent); }
+  .btn.primary:hover { background: var(--accent-dim); }
+  .btn.success { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+  .search-wrap {
+    flex: 1;
+    min-width: 160px;
+    position: relative;
+  }
+
+  .search-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    pointer-events: none;
+  }
+
+  #sym-search {
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 0.82rem;
+    padding: 6px 10px 6px 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  #sym-search:focus { border-color: var(--accent); }
+  #sym-search::placeholder { color: var(--text3); }
+
+  /* Shortcut hint */
+  .shortcuts {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .shortcut {
+    font-size: 0.73rem;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  kbd {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    padding: 1px 5px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    color: var(--text2);
+  }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tab-bar::-webkit-scrollbar { display: none; }
+
+  .tab {
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    padding: 6px 12px 7px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text3);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.1s;
+    margin-bottom: -1px;
+  }
+
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* Symbol grid */
+  .sym-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 80px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  .sym {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    cursor: pointer;
+    color: var(--text);
+    transition: all 0.08s;
+    font-family: var(--mono);
+    position: relative;
+  }
+
+  .sym:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .sym:active { transform: scale(0.93); }
+
+  /* Tooltip */
+  .sym::after {
+    content: attr(data-name);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    font-family: var(--sans);
+    font-size: 0.67rem;
+    padding: 3px 7px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+    z-index: 10;
+  }
+
+  .sym:hover::after { opacity: 1; }
+
+  /* Status bar */
+  .status {
+    margin-top: 14px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text3);
+    display: flex;
+    gap: 16px;
+  }
+
+  .status span { color: var(--text2); }
+
+  footer {
+    width: 100%;
+    max-width: 860px;
+    padding: 1rem 1.5rem 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.72rem;
+    color: var(--text3);
+  }
+
+  footer a { color: var(--text3); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>unicode-math-editor</h1>
+  <span class="badge">v1.0</span>
+</header>
+
+<main>
+  <div class="editor-wrap">
+    <textarea id="editor" placeholder="Type your math here, or click symbols below…" spellcheck="false" autocomplete="off" autocorrect="off"></textarea>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn primary" id="copy-btn" onclick="copyText()">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Copy
+    </button>
+    <button class="btn" onclick="clearText()">Clear</button>
+    <div class="search-wrap">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="sym-search" type="text" placeholder="Search symbols…" oninput="filterSyms()" autocomplete="off">
+    </div>
+  </div>
+
+  <div class="shortcuts">
+    <div class="shortcut">Select text + <kbd>Ctrl</kbd><kbd>↑</kbd> → superscript</div>
+    <div class="shortcut">Select text + <kbd>Ctrl</kbd><kbd>↓</kbd> → subscript</div>
+    <div class="shortcut"><kbd>Ctrl</kbd><kbd>Z</kbd> to undo</div>
+  </div>
+
+  <div class="tab-bar" id="tab-bar"></div>
+  <div class="sym-grid" id="sym-grid"></div>
+
+  <div class="status" id="status">
+    <span id="char-count">0 chars</span>
+  </div>
+</main>
+
+<footer>
+  <span>All characters are real Unicode codepoints — paste anywhere.</span>
+  <a href="https://github.com/" target="_blank">GitHub ↗</a>
+</footer>
+
+<script>
+const SUP_MAP={0:'⁰',1:'¹',2:'²',3:'³',4:'⁴',5:'⁵',6:'⁶',7:'⁷',8:'⁸',9:'⁹','+':'⁺','-':'⁻','=':'⁼','(':'⁽',')':'⁾','a':'ᵃ','b':'ᵇ','c':'ᶜ','d':'ᵈ','e':'ᵉ','f':'ᶠ','g':'ᵍ','h':'ʰ','i':'ⁱ','j':'ʲ','k':'ᵏ','l':'ˡ','m':'ᵐ','n':'ⁿ','o':'ᵒ','p':'ᵖ','r':'ʳ','s':'ˢ','t':'ᵗ','u':'ᵘ','v':'ᵛ','w':'ʷ','x':'ˣ','y':'ʸ','z':'ᶻ'};
+const SUB_MAP={0:'₀',1:'₁',2:'₂',3:'₃',4:'₄',5:'₅',6:'₆',7:'₇',8:'₈',9:'₉','+':'₊','-':'₋','=':'₌','(':'₍',')':'₎','a':'ₐ','e':'ₑ','h':'ₕ','i':'ᵢ','j':'ⱼ','k':'ₖ','l':'ₗ','m':'ₘ','n':'ₙ','o':'ₒ','p':'ₚ','r':'ᵣ','s':'ₛ','t':'ₜ','u':'ᵤ','v':'ᵥ','x':'ₓ'};
+
+const CATS=[
+  {id:'sup',label:'Superscripts',syms:Object.entries(SUP_MAP).map(([k,v])=>({s:v,n:'sup: '+k}))},
+  {id:'sub',label:'Subscripts',syms:Object.entries(SUB_MAP).map(([k,v])=>({s:v,n:'sub: '+k}))},
+  {id:'ops',label:'Operators',syms:[
+    {s:'±',n:'plus-minus'},{s:'∓',n:'minus-plus'},{s:'×',n:'times'},{s:'÷',n:'divide'},{s:'·',n:'dot product'},{s:'∗',n:'asterisk'},{s:'⊕',n:'oplus / direct sum'},{s:'⊗',n:'otimes / tensor'},{s:'⊙',n:'odot'},{s:'∘',n:'ring / compose'},
+    {s:'√',n:'sqrt'},{s:'∛',n:'cube root'},{s:'∜',n:'4th root'},{s:'∝',n:'proportional to'},{s:'∞',n:'infinity'},{s:'∂',n:'partial derivative'},{s:'∇',n:'nabla / del'},{s:'Δ',n:'delta / difference'},{s:'∫',n:'integral'},{s:'∬',n:'double integral'},{s:'∭',n:'triple integral'},{s:'∮',n:'contour integral'},{s:'∑',n:'sum (sigma)'},{s:'∏',n:'product (pi)'},{s:'∐',n:'coproduct'},
+  ]},
+  {id:'rel',label:'Relations',syms:[
+    {s:'≠',n:'not equal'},{s:'≡',n:'identical / congruent'},{s:'≢',n:'not identical'},{s:'≈',n:'approximately equal'},{s:'≉',n:'not approx'},{s:'≃',n:'asymptotically equal'},{s:'≅',n:'congruent'},{s:'∼',n:'similar / tilde'},{s:'≪',n:'much less than'},{s:'≫',n:'much greater than'},
+    {s:'≤',n:'less or equal'},{s:'≥',n:'greater or equal'},{s:'≦',n:'leq'},{s:'≧',n:'geq'},{s:'⊂',n:'subset'},{s:'⊃',n:'superset'},{s:'⊆',n:'subset or equal'},{s:'⊇',n:'superset or equal'},{s:'∈',n:'element of'},{s:'∉',n:'not element of'},{s:'∋',n:'contains'},{s:'∅',n:'empty set'},
+    {s:'∩',n:'intersection'},{s:'∪',n:'union'},{s:'⊓',n:'meet'},{s:'⊔',n:'join'},{s:'⊥',n:'perpendicular'},{s:'∥',n:'parallel'},{s:'≺',n:'precedes'},{s:'≻',n:'succeeds'},{s:'⊴',n:'normal subgroup'},{s:'⊵',n:'normal supergroup'},
+  ]},
+  {id:'arrows',label:'Arrows',syms:[
+    {s:'→',n:'right arrow'},{s:'←',n:'left arrow'},{s:'↔',n:'left-right arrow'},{s:'⇒',n:'implies (right)'},{s:'⇐',n:'left implies'},{s:'⇔',n:'iff / biconditional'},{s:'↦',n:'maps to'},{s:'↪',n:'hookrightarrow (injective)'},{s:'↠',n:'twoheadrightarrow (surjective)'},{s:'⟶',n:'long right arrow'},{s:'⟵',n:'long left arrow'},{s:'⟷',n:'long left-right'},{s:'⟹',n:'long implies'},{s:'⟺',n:'long iff'},{s:'⟼',n:'long maps to'},
+    {s:'↑',n:'up arrow'},{s:'↓',n:'down arrow'},{s:'↕',n:'up-down arrow'},{s:'⇑',n:'double up'},{s:'⇓',n:'double down'},{s:'↗',n:'northeast arrow'},{s:'↘',n:'southeast arrow'},{s:'↙',n:'southwest arrow'},{s:'↖',n:'northwest arrow'},{s:'↺',n:'counterclockwise arrow'},{s:'↻',n:'clockwise arrow'},
+  ]},
+  {id:'greek',label:'Greek',syms:[
+    {s:'α',n:'alpha'},{s:'β',n:'beta'},{s:'γ',n:'gamma'},{s:'δ',n:'delta'},{s:'ε',n:'epsilon'},{s:'ζ',n:'zeta'},{s:'η',n:'eta'},{s:'θ',n:'theta'},{s:'ι',n:'iota'},{s:'κ',n:'kappa'},{s:'λ',n:'lambda'},{s:'μ',n:'mu'},{s:'ν',n:'nu'},{s:'ξ',n:'xi'},{s:'π',n:'pi'},{s:'ρ',n:'rho'},{s:'σ',n:'sigma'},{s:'τ',n:'tau'},{s:'υ',n:'upsilon'},{s:'φ',n:'phi'},{s:'χ',n:'chi'},{s:'ψ',n:'psi'},{s:'ω',n:'omega'},
+    {s:'Α',n:'Alpha'},{s:'Β',n:'Beta'},{s:'Γ',n:'Gamma'},{s:'Δ',n:'Delta'},{s:'Ε',n:'Epsilon'},{s:'Ζ',n:'Zeta'},{s:'Η',n:'Eta'},{s:'Θ',n:'Theta'},{s:'Λ',n:'Lambda'},{s:'Ξ',n:'Xi'},{s:'Π',n:'Pi'},{s:'Σ',n:'Sigma'},{s:'Υ',n:'Upsilon'},{s:'Φ',n:'Phi'},{s:'Χ',n:'Chi'},{s:'Ψ',n:'Psi'},{s:'Ω',n:'Omega'},
+    {s:'ϕ',n:'phi (variant)'},{s:'ϑ',n:'theta (variant)'},{s:'ϰ',n:'kappa (variant)'},{s:'ϱ',n:'rho (variant)'},{s:'ϵ',n:'epsilon (variant)'},{s:'ϖ',n:'pi (variant)'},
+  ]},
+  {id:'bb',label:'𝔸 Fonts',syms:[
+    {s:'𝔸',n:'A (blackboard)'},{s:'𝔹',n:'B (blackboard)'},{s:'ℂ',n:'C (complex numbers)'},{s:'𝔻',n:'D (blackboard)'},{s:'𝔼',n:'E (blackboard)'},{s:'𝔽',n:'F (blackboard)'},{s:'𝔾',n:'G (blackboard)'},{s:'ℍ',n:'H (quaternions)'},{s:'𝕀',n:'I (blackboard)'},{s:'𝕁',n:'J (blackboard)'},{s:'𝕂',n:'K (blackboard)'},{s:'𝕃',n:'L (blackboard)'},{s:'𝕄',n:'M (blackboard)'},{s:'ℕ',n:'N (natural numbers)'},{s:'𝕆',n:'O (blackboard)'},{s:'ℙ',n:'P (primes)'},{s:'ℚ',n:'Q (rationals)'},{s:'ℝ',n:'R (reals)'},{s:'𝕊',n:'S (blackboard)'},{s:'𝕋',n:'T (blackboard)'},{s:'𝕌',n:'U (blackboard)'},{s:'𝕍',n:'V (blackboard)'},{s:'𝕎',n:'W (blackboard)'},{s:'𝕏',n:'X (blackboard)'},{s:'𝕐',n:'Y (blackboard)'},{s:'ℤ',n:'Z (integers)'},
+    {s:'𝒜',n:'A (script)'},{s:'ℬ',n:'B (script)'},{s:'𝒞',n:'C (script)'},{s:'𝒟',n:'D (script)'},{s:'ℰ',n:'E (script)'},{s:'ℱ',n:'F (script)'},{s:'𝒢',n:'G (script)'},{s:'ℋ',n:'H (script)'},{s:'ℐ',n:'I (script)'},{s:'𝒥',n:'J (script)'},{s:'𝒦',n:'K (script)'},{s:'ℒ',n:'L (script)'},{s:'ℳ',n:'M (script)'},{s:'𝒩',n:'N (script)'},{s:'𝒪',n:'O (script)'},{s:'𝒫',n:'P (script)'},{s:'𝒬',n:'Q (script)'},{s:'ℛ',n:'R (script)'},{s:'𝒮',n:'S (script)'},{s:'𝒯',n:'T (script)'},{s:'𝒰',n:'U (script)'},{s:'𝒱',n:'V (script)'},{s:'𝒲',n:'W (script)'},{s:'𝒳',n:'X (script)'},{s:'𝒴',n:'Y (script)'},{s:'𝒵',n:'Z (script)'},
+    {s:'𝔄',n:'A (fraktur)'},{s:'𝔅',n:'B (fraktur)'},{s:'ℭ',n:'C (fraktur)'},{s:'𝔇',n:'D (fraktur)'},{s:'𝔈',n:'E (fraktur)'},{s:'𝔉',n:'F (fraktur)'},{s:'𝔊',n:'G (fraktur)'},{s:'ℌ',n:'H (fraktur)'},{s:'ℑ',n:'I (fraktur / imaginary)'},{s:'𝔍',n:'J (fraktur)'},{s:'𝔎',n:'K (fraktur)'},{s:'𝔏',n:'L (fraktur)'},{s:'𝔐',n:'M (fraktur)'},{s:'𝔑',n:'N (fraktur)'},{s:'𝔒',n:'O (fraktur)'},{s:'𝔓',n:'P (fraktur)'},{s:'𝔔',n:'Q (fraktur)'},{s:'ℜ',n:'R (fraktur / real part)'},{s:'𝔖',n:'S (fraktur)'},{s:'𝔗',n:'T (fraktur)'},{s:'𝔘',n:'U (fraktur)'},{s:'𝔙',n:'V (fraktur)'},{s:'𝔚',n:'W (fraktur)'},{s:'𝔛',n:'X (fraktur)'},{s:'𝔜',n:'Y (fraktur)'},{s:'ℨ',n:'Z (fraktur)'},
+  ]},
+  {id:'misc',label:'Misc',syms:[
+    {s:'…',n:'ellipsis'},{s:'⋯',n:'centered dots (cdots)'},{s:'⋮',n:'vertical dots (vdots)'},{s:'⋱',n:'diagonal dots (ddots)'},{s:'⌊',n:'floor left'},{s:'⌋',n:'floor right'},{s:'⌈',n:'ceil left'},{s:'⌉',n:'ceil right'},{s:'⟨',n:'angle bracket left'},{s:'⟩',n:'angle bracket right'},{s:'‖',n:'norm / double bar'},{s:'∤',n:'does not divide'},{s:'⊢',n:'turnstile / proves'},{s:'⊣',n:'dashv'},{s:'⊨',n:'models'},{s:'⊭',n:'not models'},
+    {s:'∀',n:'for all'},{s:'∃',n:'there exists'},{s:'∄',n:'does not exist'},{s:'¬',n:'not'},{s:'∧',n:'and (wedge)'},{s:'∨',n:'or (vee)'},{s:'⊤',n:'top / true'},{s:'⊥',n:'bottom / false'},{s:'⟂',n:'perp'},{s:'∴',n:'therefore'},{s:'∵',n:'because'},
+    {s:'□',n:'open box (qed)'},{s:'■',n:'black square (qed)'},{s:'◻',n:'white square'},{s:'♦',n:'diamond'},
+    {s:'ℓ',n:'script ell'},{s:'ℏ',n:'h-bar (Planck)'},{s:'℃',n:'Celsius'},{s:'℉',n:'Fahrenheit'},{s:'Å',n:'Ångström'},{s:'‰',n:'per mille'},{s:'‱',n:'per ten thousand'},{s:'°',n:'degree'},
+  ]},
+];
+
+let activeCat = CATS[0].id;
+const ta = document.getElementById('editor');
+
+function buildTabs() {
+  const bar = document.getElementById('tab-bar');
+  bar.innerHTML = '';
+  CATS.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (c.id === activeCat ? ' active' : '');
+    b.textContent = c.label;
+    b.onclick = () => { activeCat = c.id; buildTabs(); renderGrid(); };
+    bar.appendChild(b);
+  });
+}
+
+function renderGrid(filter = '') {
+  const grid = document.getElementById('sym-grid');
+  let syms = filter
+    ? CATS.flatMap(c => c.syms).filter(s => s.n.toLowerCase().includes(filter.toLowerCase()) || s.s.includes(filter))
+    : CATS.find(c => c.id === activeCat).syms;
+  grid.innerHTML = '';
+  syms.forEach(({ s, n }) => {
+    const b = document.createElement('button');
+    b.className = 'sym';
+    b.textContent = s;
+    b.setAttribute('data-name', n);
+    b.title = n;
+    b.onclick = () => insertAt(s);
+    grid.appendChild(b);
+  });
+}
+
+function insertAt(char) {
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  ta.value = ta.value.slice(0, start) + char + ta.value.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + char.length;
+  ta.focus();
+  updateStatus();
+}
+
+function filterSyms() {
+  const q = document.getElementById('sym-search').value.trim();
+  renderGrid(q);
+}
+
+function copyText() {
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const b = document.getElementById('copy-btn');
+    b.textContent = '✓ Copied!';
+    b.classList.add('success');
+    setTimeout(() => {
+      b.innerHTML = '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy';
+      b.classList.remove('success');
+    }, 1500);
+  });
+}
+
+function clearText() { ta.value = ''; ta.focus(); updateStatus(); }
+
+function updateStatus() {
+  const v = ta.value;
+  document.getElementById('char-count').textContent = v.length + ' char' + (v.length !== 1 ? 's' : '');
+}
+
+ta.addEventListener('input', updateStatus);
+
+ta.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowUp') {
+    e.preventDefault();
+    transformSelection(SUP_MAP);
+  } else if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowDown') {
+    e.preventDefault();
+    transformSelection(SUB_MAP);
+  }
+});
+
+function transformSelection(map) {
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const sel = ta.value.slice(start, end);
+  if (!sel) return;
+  const out = [...sel].map(c => map[c.toLowerCase()] || c).join('');
+  ta.value = ta.value.slice(0, start) + out + ta.value.slice(end);
+  ta.selectionStart = start;
+  ta.selectionEnd = start + out.length;
+  updateStatus();
+}
+
+buildTabs();
+renderGrid();
+</script>
+</body>
+</html>

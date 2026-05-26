@@ -14,9 +14,9 @@ This editor only outputs real Unicode codepoints. What you copy is what you get,
 ## Features
 
 - **Real sub/superscripts** — ₐ ₁ ² ⁿ are proper Unicode, not styled HTML
-- **500+ symbols** across 8 categories: Superscripts, Subscripts, Operators, Relations, Arrows, Greek, Blackboard/Script/Fraktur fonts, Misc
+- **500+ symbols** across categories: Superscripts, Subscripts, Operators, Vectors, Physics, and more
 - **Keyboard shortcuts** — select any text, then `Ctrl+↑` to superscript or `Ctrl+↓` to subscript
-- **Symbol search** — find symbols by name (`integral`, `theta`, `implies`, …)
+- **Symbol search** — find symbols by name (`integral`, `theta`, `implies`, `partial`, …)
 - **Zero dependencies** — single HTML file, works offline, no install
 
 ## Usage
@@ -33,9 +33,11 @@ f: ℝⁿ → ℝ        →  f: ℝⁿ → ℝ
 
 | Shortcut | Action |
 |---|---|
-| `Ctrl+↑` (or `Cmd+↑`) | Convert selected text to superscript |
-| `Ctrl+↓` (or `Cmd+↓`) | Convert selected text to subscript |
+| `Ctrl+↑` (or `Cmd+↑`) | Toggle normal text and superscript |
+| `Ctrl+↓` (or `Cmd+↓`) | Toggle normal text and subscript |
 | `Ctrl+Z` | Undo |
+| `Ctrl+B` | Toggle normal text and boldface (when in Unicode) |
+| `Ctrl+I` | Toggle normal text and italics (when in Unicode) |
 
 ## Limitations
 
